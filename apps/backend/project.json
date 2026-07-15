@@ -1,0 +1,49 @@
+{
+  "name": "backend",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/backend/supabase",
+  "tags": ["scope:backend", "type:app"],
+  "targets": {
+    "start": {
+      "continuous": true,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "supabase start --workdir apps/backend"
+      }
+    },
+    "stop": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "supabase stop --workdir apps/backend"
+      }
+    },
+    "reset": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "supabase db reset --local --workdir apps/backend"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "supabase db lint --local --workdir apps/backend"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p libs/backend/data-access/tsconfig.lib.json"
+      }
+    },
+    "types": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/libs/backend/data-access/src/lib/database.types.ts"
+      ],
+      "options": {
+        "command": "supabase gen types typescript --local --workdir apps/backend > libs/backend/data-access/src/lib/database.types.ts"
+      }
+    }
+  }
+}

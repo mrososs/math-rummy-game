@@ -1,0 +1,148 @@
+:root {
+  --font-display: 'Space Grotesk Variable', 'Trebuchet MS', sans-serif;
+  --font-body: 'Manrope Variable', 'Segoe UI', sans-serif;
+  --color-navy: #0b2545;
+  --color-navy-raised: #123a63;
+  --color-table: #1c548c;
+  --color-action: #2e74b5;
+  --color-action-strong: #2769a6;
+  --color-success: #2e7d32;
+  --color-turn: #f59e0b;
+  --color-error: #c62828;
+  --color-surface: #e8eef5;
+  --color-surface-soft: #f4f6f9;
+  --color-canvas: #f2eee7;
+  --color-card: #fffefa;
+  --color-card-border: #d3dde7;
+  --color-ink: #17212b;
+  --color-text-muted: #5f6b76;
+  --ion-font-family: var(--font-body);
+  --ion-color-primary: #2e74b5;
+  --ion-color-primary-rgb: 46, 116, 181;
+  --ion-color-primary-contrast: #f8fafc;
+  --ion-color-primary-contrast-rgb: 248, 250, 252;
+  --ion-color-primary-shade: #28669f;
+  --ion-color-primary-tint: #4382bc;
+  --ion-background-color: var(--color-canvas);
+  --ion-text-color: var(--color-ink);
+}
+
+html {
+  min-width: 20rem;
+  background: var(--color-canvas);
+  font-family: var(--font-body);
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-kerning: normal;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.screen-content::part(background) {
+  background: var(--color-canvas);
+}
+
+.screen-content--navy::part(background) {
+  background: radial-gradient(
+    circle at 50% 34%,
+    #174a7e 0%,
+    var(--color-navy) 68%
+  );
+}
+
+.screen-content--table::part(background) {
+  background: radial-gradient(
+    ellipse at 50% 38%,
+    var(--color-table) 0%,
+    var(--color-navy) 74%
+  );
+}
+
+.screen-frame {
+  width: min(100%, 34rem);
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  color: var(--color-action);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  min-height: 3.25rem;
+  border-radius: 0.88rem;
+  font-weight: 700;
+  text-transform: none;
+  --border-radius: 0.88rem;
+}
+
+.primary-button {
+  --background: var(--color-action);
+  --background-activated: var(--color-action-strong);
+  --box-shadow: 0 0.65rem 1.25rem -0.65rem rgb(46 116 181 / 72%);
+  --color: #f8fafc;
+}
+
+.secondary-button {
+  --background: transparent;
+  --border-color: #3d5f80;
+  --border-style: solid;
+  --border-width: 1px;
+  --color: #dbe6f1;
+}
+
+.danger-button {
+  --background: var(--color-error);
+  --color: #fff7f5;
+}
+
+.safe-area-block {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+@media (min-width: 48rem) {
+  .screen-frame {
+    width: min(100%, 42rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}

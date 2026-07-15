@@ -1,0 +1,27 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": false,
+    "paths": {
+      "game-domain": ["./libs/game/domain/src/index.ts"],
+      "network-contracts": ["./libs/network/contracts/src/index.ts"],
+      "room-state": ["./libs/room/state/src/index.ts"],
+      "shared-ui": ["./libs/shared/ui/src/index.ts"],
+      "backend-data-access": ["./libs/backend/data-access/src/index.ts"],
+      "game-state": ["./libs/game/state/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

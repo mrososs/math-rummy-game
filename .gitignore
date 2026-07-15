@@ -1,0 +1,54 @@
+# Specifies intentionally untracked files to ignore when using Git
+# http://git-scm.com/docs/gitignore
+
+*~
+*.sw[mnpcod]
+.tmp
+*.tmp
+*.tmp.*
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+UserInterfaceState.xcuserstate
+$RECYCLE.BIN/
+
+*.log
+log.txt
+npm-debug.log*
+.nx-*-serve.log
+.nx-*-serve.err.log
+
+/.idea
+/.ionic
+/.sass-cache
+/.sourcemaps
+/.versions
+/.vscode/*
+!/.vscode/extensions.json
+/coverage
+/dist
+/node_modules
+/.artifacts
+/platforms
+/plugins
+/www
+
+# Local design source and developer secrets
+/.design-reference/
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Supabase local runtime state
+apps/backend/supabase/.branches/
+apps/backend/supabase/.temp/
+
+
+
+.nx/cache
+.nx/workspace-data
+.nx/migrate-runs
+vitest.config.*.timestamp*
+vite.config.*.timestamp*

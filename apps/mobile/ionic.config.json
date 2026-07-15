@@ -1,0 +1,7 @@
+{
+  "name": "math-rummy-mobile",
+  "type": "vue-vite",
+  "integrations": {
+    "capacitor": {}
+  }
+}

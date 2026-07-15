@@ -1,0 +1,9 @@
+{
+  "name": "room-state",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/room/state/src",
+  "projectType": "library",
+  "tags": ["scope:room", "type:state"],
+  "// targets": "to see all targets run: nx show project room-state --web",
+  "targets": {}
+}

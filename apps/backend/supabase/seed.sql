@@ -1,0 +1,2 @@
+-- The game creates rooms and anonymous player profiles at runtime.
+-- This file intentionally contains no shared demo accounts or credentials.
