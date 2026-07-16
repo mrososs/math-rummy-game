@@ -4,6 +4,7 @@ import {
   checkmarkCircleOutline,
   informationCircleOutline,
 } from 'ionicons/icons';
+import { playSound } from './useSound';
 
 type ToastTone = 'success' | 'danger' | 'medium';
 
@@ -26,9 +27,14 @@ async function present(
 /** Lightweight success/failure notifications via the Ionic toast controller. */
 export function useToast() {
   return {
-    success: (message: string) =>
-      present(message, 'success', checkmarkCircleOutline),
-    error: (message: string) => present(message, 'danger', alertCircleOutline),
+    success: (message: string) => {
+      playSound('success');
+      return present(message, 'success', checkmarkCircleOutline);
+    },
+    error: (message: string) => {
+      playSound('error');
+      return present(message, 'danger', alertCircleOutline);
+    },
     info: (message: string) =>
       present(message, 'medium', informationCircleOutline),
   };

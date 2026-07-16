@@ -8,6 +8,7 @@ import { useRoomStore } from 'room-state';
 import GameTable from '../components/game/GameTable.vue';
 import MatchResultPanel from '../components/game/MatchResultPanel.vue';
 import { useGameSession } from '../composables/useGameSession';
+import { playSound } from '../composables/useSound';
 import { useSettingsStore } from '../stores/use-settings-store';
 
 const route = useRoute();
@@ -53,6 +54,14 @@ const {
   canDiscard,
   canHit,
 } = storeToRefs(gameStore);
+
+function toggleCard(cardId: string): void {
+  const wasSelected = gameStore.selectedCardIds.includes(cardId);
+  gameStore.toggleCard(cardId);
+  const nowSelected = gameStore.selectedCardIds.includes(cardId);
+  if (nowSelected && !wasSelected) playSound('select');
+  else if (!nowSelected && wasSelected) playSound('deselect');
+}
 </script>
 
 <template>
@@ -90,7 +99,7 @@ const {
         :can-discard="canDiscard && !busy"
         :can-hit="canHit && !busy"
         :phase-complete="currentPlayer?.completedPhase ?? false"
-        @toggle-card="gameStore.toggleCard"
+        @toggle-card="toggleCard"
         @draw="draw"
         @update-operation="setOperation"
         @stage-meld="gameStore.stageSelectedMeld"

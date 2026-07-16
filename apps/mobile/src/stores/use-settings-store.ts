@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import type { BotDifficulty } from 'game-domain';
 import { getAccountBackend } from '../app/game-backend';
+import { setSoundEnabled } from '../composables/useSound';
 
 export type BotTurnSpeed = 'quick' | 'relaxed';
 
@@ -11,6 +12,7 @@ export interface GameSettings {
   botTurnSpeed: BotTurnSpeed;
   showHints: boolean;
   reducedMotion: boolean;
+  soundEnabled: boolean;
 }
 
 export interface SaveResult {
@@ -28,6 +30,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   botTurnSpeed: 'quick',
   showHints: true,
   reducedMotion: false,
+  soundEnabled: true,
 };
 
 export const useSettingsStore = defineStore('game-settings', {
@@ -74,6 +77,7 @@ export const useSettingsStore = defineStore('game-settings', {
       }
     },
     applyPreferences(): void {
+      setSoundEnabled(this.soundEnabled);
       if (typeof document === 'undefined') return;
       document.documentElement.dataset.motion = this.reducedMotion
         ? 'reduced'
@@ -94,6 +98,7 @@ function normalize(input: Partial<GameSettings>): GameSettings {
     botTurnSpeed: merged.botTurnSpeed ?? DEFAULT_SETTINGS.botTurnSpeed,
     showHints: Boolean(merged.showHints),
     reducedMotion: Boolean(merged.reducedMotion),
+    soundEnabled: Boolean(merged.soundEnabled),
   };
 }
 

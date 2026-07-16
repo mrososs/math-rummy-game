@@ -174,6 +174,16 @@ function updateSpeed(event: Event): void {
           aria-label="Reduce motion"
         />
       </div>
+      <div class="toggle-row">
+        <div>
+          <strong>Sound effects</strong>
+          <span>Play taps, card, and turn sounds during the game.</span>
+        </div>
+        <IonToggle
+          v-model="draft.soundEnabled"
+          aria-label="Sound effects"
+        />
+      </div>
     </section>
 
     <IonButton

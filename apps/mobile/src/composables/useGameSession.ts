@@ -13,6 +13,7 @@ import { useGameStore } from 'game-state';
 import { useRoomStore } from 'room-state';
 import { useRoute } from 'vue-router';
 import { useBotMatch } from './useBotMatch';
+import { playSound } from './useSound';
 import { useSettingsStore } from '../stores/use-settings-store';
 
 /**
@@ -91,6 +92,29 @@ export function useGameSession(isBotMode: ComputedRef<boolean>) {
     if (isOnline.value) return;
     if (!isGameMatch(nextState) || nextState === match.value) return;
     gameStore.hydrateGame(nextState, currentPlayerId.value);
+  });
+
+  // Gameplay sound cues for state changes (button taps get their own sound).
+  let prevStatus: string | undefined;
+  let prevMyTurn = false;
+  watch(match, (current) => {
+    if (!current) {
+      prevStatus = undefined;
+      prevMyTurn = false;
+      return;
+    }
+    const active = current.players[current.activePlayerIndex];
+    const myTurn =
+      current.status === 'playing' && active?.id === currentPlayerId.value;
+    if (current.status === 'match-ended' && prevStatus !== 'match-ended') {
+      playSound('win');
+    } else if (current.status === 'round-ended' && prevStatus !== 'round-ended') {
+      playSound('roundEnd');
+    } else if (myTurn && !prevMyTurn) {
+      playSound('turn');
+    }
+    prevStatus = current.status;
+    prevMyTurn = myTurn;
   });
 
   // Online: refetch the authoritative snapshot on app resume, tab focus, or
