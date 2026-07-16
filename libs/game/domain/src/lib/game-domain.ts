@@ -184,6 +184,269 @@ export const PHASES: readonly PhaseDefinition[] = [
   },
 ] as const;
 
+// Easier arc: smaller targets, shorter runs, fewer groups, no unique-operation
+// constraints.
+export const EASY_PHASES: readonly PhaseDefinition[] = [
+  {
+    id: 1,
+    title: 'Build two 2-card additions that equal 8',
+    shortTitle: 'Two sums of 8',
+    hitRule: 'Add a new 2-card addition that equals 8.',
+    example: [3, 5],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 8,
+      cardCount: 2,
+      operations: ['add'] as const,
+    })),
+  },
+  {
+    id: 2,
+    title: 'Build two 2-card additions that equal 10',
+    shortTitle: 'Two sums of 10',
+    hitRule: 'Add a new 2-card addition that equals 10.',
+    example: [4, 6],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 10,
+      cardCount: 2,
+      operations: ['add'] as const,
+    })),
+  },
+  {
+    id: 3,
+    title: 'Build a run of 4 consecutive numbers',
+    shortTitle: 'Run of 4',
+    hitRule: 'Extend either end while keeping a step of 1.',
+    example: [4, 5, 6, 7],
+    requirements: [{ kind: 'run', length: 4, step: 1 }],
+  },
+  {
+    id: 4,
+    title: 'Build 2 double-value pairs',
+    shortTitle: 'Two doubles',
+    hitRule: 'Add one complete double-value pair.',
+    example: [3, 6],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'double' as const,
+      cardCount: 2 as const,
+    })),
+  },
+  {
+    id: 5,
+    title: 'Build two equations that equal 12',
+    shortTitle: 'Two ways to make 12',
+    hitRule: 'Add a new equation that equals 12.',
+    example: [3, 4],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 12,
+      cardCount: 2,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 6,
+    title: 'Build 2 exact division equations',
+    shortTitle: 'Two exact divisions',
+    hitRule: 'Add a division pair with a whole-number result.',
+    example: [12, 3],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'exact-division' as const,
+      cardCount: 2 as const,
+    })),
+  },
+  {
+    id: 7,
+    title: 'Build two equations that equal 15',
+    shortTitle: 'Two ways to make 15',
+    hitRule: 'Add a new equation that equals 15.',
+    example: [7, 8],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 15,
+      cardCount: 2,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 8,
+    title: 'Build a 4-number even run',
+    shortTitle: 'Even run of 4',
+    hitRule: 'Extend either end while keeping a step of 2.',
+    example: [2, 4, 6, 8],
+    requirements: [{ kind: 'run', length: 4, step: 2, evenOnly: true }],
+  },
+  {
+    id: 9,
+    title: 'Build two equations that equal 18',
+    shortTitle: 'Two ways to make 18',
+    hitRule: 'Add a new equation that equals 18.',
+    example: [9, 2],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 18,
+      cardCount: 2,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 10,
+    title: 'Build a run plus an equation that equals 12',
+    shortTitle: 'Run + make 12',
+    hitRule: 'Hit either group according to its rule.',
+    example: [4, 5, 6, 7],
+    requirements: [
+      { kind: 'run', length: 4, step: 1 },
+      {
+        kind: 'equation',
+        target: 12,
+        cardCount: 2,
+        operations: ARITHMETIC_OPERATIONS,
+      },
+    ],
+  },
+] as const;
+
+// Harder arc: bigger targets, 3-card equations, longer runs, and extra groups.
+export const CLEVER_PHASES: readonly PhaseDefinition[] = [
+  {
+    id: 1,
+    title: 'Make 15 two ways with different operations',
+    shortTitle: 'Two ways to make 15',
+    hitRule: 'Add a new equation that equals 15.',
+    example: [7, 8],
+    uniqueOperations: true,
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 15,
+      cardCount: 2,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 2,
+    title: 'Build two 3-card equations that equal 18',
+    shortTitle: 'Two 3-card 18s',
+    hitRule: 'Add a new 3-card equation that equals 18.',
+    example: [5, 6, 7],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 18,
+      cardCount: 3,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 3,
+    title: 'Build a run of 6 consecutive numbers',
+    shortTitle: 'Run of 6',
+    hitRule: 'Extend either end while keeping a step of 1.',
+    example: [4, 5, 6, 7, 8, 9],
+    requirements: [{ kind: 'run', length: 6, step: 1 }],
+  },
+  {
+    id: 4,
+    title: 'Build 3 double-value pairs',
+    shortTitle: 'Three doubles',
+    hitRule: 'Add one complete double-value pair.',
+    example: [3, 6],
+    requirements: Array.from({ length: 3 }, () => ({
+      kind: 'double' as const,
+      cardCount: 2 as const,
+    })),
+  },
+  {
+    id: 5,
+    title: 'Build two 3-card equations that equal 20',
+    shortTitle: 'Two 3-card 20s',
+    hitRule: 'Add a new 3-card equation that equals 20.',
+    example: [8, 7, 5],
+    requirements: Array.from({ length: 2 }, () => ({
+      kind: 'equation' as const,
+      target: 20,
+      cardCount: 3,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 6,
+    title: 'Build 3 exact division equations',
+    shortTitle: 'Three exact divisions',
+    hitRule: 'Add a division pair with a whole-number result.',
+    example: [12, 3],
+    requirements: Array.from({ length: 3 }, () => ({
+      kind: 'exact-division' as const,
+      cardCount: 2 as const,
+    })),
+  },
+  {
+    id: 7,
+    title: 'Make 24 three different ways',
+    shortTitle: 'Three ways to make 24',
+    hitRule: 'Add a different equation that equals 24.',
+    example: [6, 4],
+    uniqueOperations: true,
+    requirements: Array.from({ length: 3 }, () => ({
+      kind: 'equation' as const,
+      target: 24,
+      cardCount: 2,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 8,
+    title: 'Build a 6-number even run',
+    shortTitle: 'Even run of 6',
+    hitRule: 'Extend either end while keeping a step of 2.',
+    example: [2, 4, 6, 8, 10, 12],
+    requirements: [{ kind: 'run', length: 6, step: 2, evenOnly: true }],
+  },
+  {
+    id: 9,
+    title: 'Build three 3-card equations that equal 24',
+    shortTitle: 'Three 3-card 24s',
+    hitRule: 'Add a new 3-card equation that equals 24.',
+    example: [12, 8, 4],
+    requirements: Array.from({ length: 3 }, () => ({
+      kind: 'equation' as const,
+      target: 24,
+      cardCount: 3,
+      operations: ARITHMETIC_OPERATIONS,
+    })),
+  },
+  {
+    id: 10,
+    title: 'Build a run of 6 plus a 3-card equation that equals 20',
+    shortTitle: 'Run of 6 + make 20',
+    hitRule: 'Hit either group according to its rule.',
+    example: [4, 5, 6, 7, 8, 9],
+    requirements: [
+      { kind: 'run', length: 6, step: 1 },
+      {
+        kind: 'equation',
+        target: 20,
+        cardCount: 3,
+        operations: ARITHMETIC_OPERATIONS,
+      },
+    ],
+  },
+] as const;
+
+export type PhaseDifficulty = 'easy' | 'standard' | 'clever';
+
+const PHASE_SETS: Record<PhaseDifficulty, readonly PhaseDefinition[]> = {
+  easy: EASY_PHASES,
+  standard: PHASES,
+  clever: CLEVER_PHASES,
+};
+
+export function getPhaseSet(
+  difficulty: PhaseDifficulty = 'standard',
+): readonly PhaseDefinition[] {
+  return PHASE_SETS[difficulty] ?? PHASES;
+}
+
 export const DEMO_HAND: readonly GameCard[] = [
   { id: 'demo-2', kind: 'number', value: 2 },
   { id: 'demo-3-a', kind: 'number', value: 3 },
@@ -197,8 +460,12 @@ export const DEMO_HAND: readonly GameCard[] = [
   { id: 'demo-12', kind: 'number', value: 12 },
 ] as const;
 
-export function getPhase(phaseId: number): PhaseDefinition {
-  return PHASES.find((phase) => phase.id === phaseId) ?? PHASES[0];
+export function getPhase(
+  phaseId: number,
+  difficulty: PhaseDifficulty = 'standard',
+): PhaseDefinition {
+  const set = getPhaseSet(difficulty);
+  return set.find((phase) => phase.id === phaseId) ?? set[0];
 }
 
 export function cardValue(card: GameCard): number | undefined {
@@ -265,8 +532,11 @@ export function validateMeld(
     };
   }
 
-  if (requirement.kind === 'equation' && cards.length < 2) {
-    return { valid: false, message: 'An equation needs at least 2 cards.' };
+  if (requirement.kind === 'equation' && cards.length < requirement.cardCount) {
+    return {
+      valid: false,
+      message: `An equation needs at least ${requirement.cardCount} cards.`,
+    };
   }
 
   if (requirement.kind === 'equation') {
@@ -330,8 +600,9 @@ export function validateMeldForPhase(
   phaseId: number,
   cards: readonly GameCard[],
   operation: MathOperation,
+  difficulty: PhaseDifficulty = 'standard',
 ): ValidationResult {
-  const phase = getPhase(phaseId);
+  const phase = getPhase(phaseId, difficulty);
   const attempts = phase.requirements.map((requirement) =>
     validateMeld(requirement, cards, operation),
   );
@@ -341,8 +612,9 @@ export function validateMeldForPhase(
 export function validatePhase(
   phaseId: number,
   melds: readonly { cards: readonly GameCard[]; operation: MathOperation }[],
+  difficulty: PhaseDifficulty = 'standard',
 ): ValidationResult {
-  const phase = getPhase(phaseId);
+  const phase = getPhase(phaseId, difficulty);
   if (melds.length !== phase.requirements.length) {
     return {
       valid: false,

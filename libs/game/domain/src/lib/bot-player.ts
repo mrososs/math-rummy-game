@@ -38,9 +38,10 @@ interface MeldCandidate {
 
 export function findBotPhasePlan(
   player: MatchPlayerState,
+  difficulty: BotDifficulty = 'standard',
 ): BotPhasePlan | undefined {
   if (player.completedPhase) return undefined;
-  const phase = getPhase(player.phaseId);
+  const phase = getPhase(player.phaseId, difficulty);
   const candidates = findRequirementPlans(
     phase.requirements,
     player.hand,
@@ -70,11 +71,14 @@ export function playBotTurn(
     return match;
   }
 
-  const difficulty = options.difficulty ?? 'standard';
-  const source = chooseDrawSource(match, botId, difficulty);
+  // Play style (draw/discard heuristics) follows the requested difficulty, but
+  // the PHASE SET must be the match's, since layPhase validates against it.
+  const style = options.difficulty ?? match.difficulty ?? 'standard';
+  const phaseDifficulty = match.difficulty ?? 'standard';
+  const source = chooseDrawSource(match, botId, style, phaseDifficulty);
   let next = drawCard(match, botId, source);
   let player = getPlayer(next, botId);
-  const phasePlan = findBotPhasePlan(player);
+  const phasePlan = findBotPhasePlan(player, phaseDifficulty);
 
   if (phasePlan) {
     for (const [cardId, value] of Object.entries(phasePlan.wildValues)) {
@@ -84,40 +88,49 @@ export function playBotTurn(
     player = getPlayer(next, botId);
   }
 
-  const discard = chooseDiscard(player, difficulty);
+  const discard = chooseDiscard(player, style, phaseDifficulty);
   return discard ? discardCard(next, botId, discard.id) : next;
 }
 
 function chooseDrawSource(
   match: GameMatch,
   botId: string,
-  difficulty: BotDifficulty,
+  style: BotDifficulty,
+  phaseDifficulty: BotDifficulty,
 ): DrawSource {
-  if (difficulty !== 'clever' || match.discardPile.length === 0) return 'deck';
+  if (style !== 'clever' || match.discardPile.length === 0) return 'deck';
 
   const fromDiscard = drawCard(match, botId, 'discard');
-  return findBotPhasePlan(getPlayer(fromDiscard, botId)) ? 'discard' : 'deck';
+  return findBotPhasePlan(getPlayer(fromDiscard, botId), phaseDifficulty)
+    ? 'discard'
+    : 'deck';
 }
 
 function chooseDiscard(
   player: MatchPlayerState,
-  difficulty: BotDifficulty,
+  style: BotDifficulty,
+  phaseDifficulty: BotDifficulty,
 ): GameCard | undefined {
-  if (difficulty === 'easy') return player.hand[0];
+  if (style === 'easy') return player.hand[0];
 
   return [...player.hand].sort((left, right) => {
-    if (difficulty === 'clever') {
+    if (style === 'clever') {
       const utilityDifference =
-        cardUtility(player, left) - cardUtility(player, right);
+        cardUtility(player, left, phaseDifficulty) -
+        cardUtility(player, right, phaseDifficulty);
       if (utilityDifference !== 0) return utilityDifference;
     }
     return scoreHand([right]) - scoreHand([left]);
   })[0];
 }
 
-function cardUtility(player: MatchPlayerState, card: GameCard): number {
+function cardUtility(
+  player: MatchPlayerState,
+  card: GameCard,
+  difficulty: BotDifficulty = 'standard',
+): number {
   if (card.kind === 'wild') return 100;
-  const phase = getPhase(player.phaseId);
+  const phase = getPhase(player.phaseId, difficulty);
   let utility = 0;
 
   for (const requirement of phase.requirements) {

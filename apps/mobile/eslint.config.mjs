@@ -16,6 +16,10 @@ export default [
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.vue'],
     rules: {
       'vue/multi-word-component-names': 'off',
+      // Ionic web components target named slots via the native `slot="start"`
+      // attribute; this rule is a false positive for them (auto-fixing to a
+      // Vue slot directive would break Ionic rendering).
+      'vue/no-deprecated-slot-attribute': 'off',
     },
   },
 ];

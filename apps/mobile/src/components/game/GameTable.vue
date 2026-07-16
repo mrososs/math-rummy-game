@@ -110,7 +110,7 @@ const scoreEntries = computed<ScoreEntry[]>(() => {
         id: player.id,
         name: player.name,
         phaseId: player.phaseId,
-        phaseTitle: getPhase(player.phaseId).shortTitle,
+        phaseTitle: getPhase(player.phaseId, props.match.difficulty).shortTitle,
         score: player.score,
         cardsRemaining: player.hand.length,
         color: colorById.get(player.id) ?? '#475569',

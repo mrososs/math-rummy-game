@@ -87,6 +87,7 @@ export interface InitializeGameOptions {
   seed?: string;
   phaseId?: number;
   useDemoHand?: boolean;
+  difficulty?: BotDifficulty;
 }
 
 export const useGameStore = defineStore('game-match', () => {
@@ -107,7 +108,7 @@ export const useGameStore = defineStore('game-match', () => {
     match.value?.players.find((player) => player.id === currentPlayerId.value),
   );
   const currentPhase = computed(() =>
-    getPhase(currentPlayer.value?.phaseId ?? 1),
+    getPhase(currentPlayer.value?.phaseId ?? 1, match.value?.difficulty),
   );
   const currentHand = computed(() => currentPlayer.value?.hand ?? []);
   const activePlayerState = computed(() =>
@@ -138,10 +139,15 @@ export const useGameStore = defineStore('game-match', () => {
       currentPhase.value.id,
       selectedCards.value,
       selectedOperation.value,
+      match.value?.difficulty,
     ),
   );
   const phaseValidation = computed(() =>
-    validatePhase(currentPhase.value.id, stagedMeldDetails.value),
+    validatePhase(
+      currentPhase.value.id,
+      stagedMeldDetails.value,
+      match.value?.difficulty,
+    ),
   );
   const canDraw = computed(
     () =>
@@ -201,6 +207,7 @@ export const useGameStore = defineStore('game-match', () => {
       seed: options.seed ?? 'room-K4P9',
       startingPlayerId: localPlayerId,
       startingPhaseId: phaseId,
+      difficulty: options.difficulty,
     });
     match.value =
       options.useDemoHand === true

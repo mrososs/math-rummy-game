@@ -51,7 +51,12 @@ export function useGameSession(isBotMode: ComputedRef<boolean>) {
       gameStore.initializeGame(
         roomStore.room.players.map(({ id, name, seat }) => ({ id, name, seat })),
         roomStore.currentPlayerId,
-        { seed: `bots-${Date.now()}`, phaseId: 1, useDemoHand: false },
+        {
+          seed: `bots-${Date.now()}`,
+          phaseId: 1,
+          useDemoHand: false,
+          difficulty: settingsStore.botDifficulty,
+        },
       );
       if (gameStore.match) void roomStore.publishGameState(gameStore.match);
       return;

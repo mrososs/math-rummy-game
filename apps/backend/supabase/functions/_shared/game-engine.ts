@@ -13,6 +13,7 @@ import {
   type GameCard,
   type MathOperation,
   type MeldRequirement,
+  type PhaseDifficulty,
   type ValidationResult,
 } from './game-domain.ts';
 
@@ -59,6 +60,8 @@ export interface GameMatch {
   discardPile: readonly GameCard[];
   actionLog: readonly GameActionLog[];
   winnerId?: string;
+  /** Which phase set this match uses. Undefined behaves as 'standard'. */
+  difficulty?: PhaseDifficulty;
 }
 
 export interface EngineMeldInput {
@@ -95,6 +98,7 @@ export function createMatch(
     handSize?: number;
     startingPlayerId?: string;
     startingPhaseId?: number;
+    difficulty?: PhaseDifficulty;
   } = {},
 ): GameMatch {
   if (players.length < 2 || players.length > 8) {
@@ -132,6 +136,7 @@ export function createMatch(
     deck,
     discardPile: firstDiscard ? [firstDiscard] : [],
     actionLog: [],
+    difficulty: options.difficulty,
   };
 }
 
@@ -184,7 +189,7 @@ export function layPhase(
     ...input,
     cards: input.cardIds.map((cardId) => findCard(player.hand, cardId)),
   }));
-  const validation = validatePhase(player.phaseId, melds);
+  const validation = validatePhase(player.phaseId, melds, match.difficulty);
   if (!validation.valid) {
     throw new GameRuleError('INVALID_PHASE', validation.message);
   }
@@ -244,7 +249,13 @@ export function hitMeld(
       'That table group no longer exists.',
     );
 
-  const validation = validateHitOnMeld(target, targetMeld, cards, operation);
+  const validation = validateHitOnMeld(
+    target,
+    targetMeld,
+    cards,
+    operation,
+    match.difficulty,
+  );
   if (!validation.valid)
     throw new GameRuleError('HIT_NOT_ALLOWED', validation.message);
 
@@ -309,12 +320,13 @@ export function validateHitOnMeld(
   targetMeld: LaidMeld,
   cards: readonly GameCard[],
   operation: MathOperation,
+  difficulty: PhaseDifficulty = 'standard',
 ): HitValidationResult {
   if (cards.length === 0) {
     return { valid: false, message: 'Select cards to hit the table.' };
   }
 
-  const phase = getPhase(targetMeld.phaseId);
+  const phase = getPhase(targetMeld.phaseId, difficulty);
   const compatibleRequirements = phase.requirements.filter((requirement) =>
     requirement.kind === 'run'
       ? targetMeld.operation === 'run'
@@ -454,7 +466,11 @@ export function startNextRound(
   }
   const next = createMatch(
     match.players.map(({ id, name, seat }) => ({ id, name, seat })),
-    { seed, startingPlayerId: match.players[match.activePlayerIndex].id },
+    {
+      seed,
+      startingPlayerId: match.players[match.activePlayerIndex].id,
+      difficulty: match.difficulty,
+    },
   );
   return {
     ...next,

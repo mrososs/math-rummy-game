@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getPhase } from './game-domain';
 import {
   assignWildValue,
   createMatch,
@@ -117,6 +118,54 @@ describe('game engine — deck recycling', () => {
     expect(result.discardPile).toHaveLength(1);
     expect(result.deck.length + result.discardPile.length).toBe(2);
     expect(result.turnStep).toBe('build');
+  });
+});
+
+describe('game engine — difficulty phase sets', () => {
+  it('resolves different phase-1 goals per difficulty', () => {
+    const easy = getPhase(1, 'easy');
+    const standard = getPhase(1, 'standard');
+    const clever = getPhase(1, 'clever');
+    expect(easy.shortTitle).not.toBe(standard.shortTitle);
+    expect(clever.shortTitle).not.toBe(standard.shortTitle);
+    // Easy phase 1 is two 2-card sums of 8.
+    expect(easy.requirements[0]).toMatchObject({ target: 8, cardCount: 2 });
+  });
+
+  it('a clever match requires 3-card equations at phase 2', () => {
+    const match = craft(
+      { phaseId: 2, hand: [num('a', 5), num('b', 6), num('c', 7), num('d', 9)] },
+      { difficulty: 'clever' },
+    );
+    // Two-card equation is rejected (clever phase 2 needs 3-card equations = 18).
+    expect(() =>
+      layPhase(match, 'p1', [
+        { id: 'g1', cardIds: ['a', 'b'], operation: 'add' },
+        { id: 'g2', cardIds: ['c', 'd'], operation: 'add' },
+      ]),
+    ).toThrowError();
+  });
+
+  it('a clever match accepts two 3-card equations = 18', () => {
+    const match = craft(
+      {
+        phaseId: 2,
+        hand: [
+          num('a', 5),
+          num('b', 6),
+          num('c', 7),
+          num('d', 6),
+          num('e', 6),
+          num('f', 6),
+        ],
+      },
+      { difficulty: 'clever' },
+    );
+    const result = layPhase(match, 'p1', [
+      { id: 'g1', cardIds: ['a', 'b', 'c'], operation: 'add' }, // 5+6+7 = 18
+      { id: 'g2', cardIds: ['d', 'e', 'f'], operation: 'add' }, // 6+6+6 = 18
+    ]);
+    expect(result.players[0].completedPhase).toBe(true);
   });
 });
 
