@@ -5,9 +5,11 @@ import { useRouter } from 'vue-router';
 import { useRoomStore } from 'room-state';
 import type { CreateRoomInput } from 'network-contracts';
 import CreateRoomForm from '../components/room/CreateRoomForm.vue';
+import { useSettingsStore } from '../stores/use-settings-store';
 
 const router = useRouter();
 const roomStore = useRoomStore();
+const settingsStore = useSettingsStore();
 const { errorMessage, isLoading } = storeToRefs(roomStore);
 
 async function createRoom(input: CreateRoomInput) {
@@ -23,6 +25,7 @@ async function createRoom(input: CreateRoomInput) {
     >
       <CreateRoomForm
         :is-submitting="isLoading"
+        :initial-name="settingsStore.playerName"
         class="screen-frame"
         @back="router.back()"
         @submit="createRoom"

@@ -368,4 +368,24 @@ function handleWildValue(cardId: string, value: number): void {
     background: #eef3f8;
   }
 }
+
+/* Tablets / large phones in portrait: keep the single column readable by
+   centering it instead of stretching edge-to-edge. */
+@media (orientation: portrait) and (min-width: 40rem) {
+  .game-table {
+    max-width: 40rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+}
+
+/* Wider landscape tablets: give the board a bit more room but cap it so cards
+   and the workbench don't sprawl. */
+@media (orientation: landscape) and (min-width: 64rem) {
+  .game-table {
+    max-width: 72rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+}
 </style>

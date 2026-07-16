@@ -1,24 +1,21 @@
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue';
-import { IonButton, IonInput, IonSegment, IonSegmentButton } from '@ionic/vue';
-import { useRoomQr } from 'room-state';
-import type { CreateRoomInput, TransportKind } from 'network-contracts';
+import { shallowRef } from 'vue';
+import { IonButton, IonInput } from '@ionic/vue';
+import type { CreateRoomInput } from 'network-contracts';
 import ScreenHeader from '../layout/ScreenHeader.vue';
+
+const props = defineProps<{
+  isSubmitting?: boolean;
+  initialName?: string;
+}>();
 
 const emit = defineEmits<{
   back: [];
   submit: [input: CreateRoomInput];
 }>();
 
-const props = defineProps<{
-  isSubmitting?: boolean;
-}>();
-
-const hostName = shallowRef('Maya');
-const transport = shallowRef<TransportKind>('auto');
+const hostName = shallowRef((props.initialName ?? '').trim() || 'Player');
 const maxPlayers = shallowRef(6);
-const roomCode = computed(() => 'K4P9');
-const { dataUrl: qrDataUrl } = useRoomQr(roomCode);
 
 function changePlayerCount(delta: number) {
   maxPlayers.value = Math.min(8, Math.max(2, maxPlayers.value + delta));
@@ -27,7 +24,7 @@ function changePlayerCount(delta: number) {
 function submit() {
   emit('submit', {
     hostName: hostName.value,
-    transport: transport.value,
+    transport: 'wifi',
     maxPlayers: maxPlayers.value,
   });
 }
@@ -55,27 +52,6 @@ function submit() {
 
       <fieldset class="field-group">
         <legend class="field-label">
-          Transport
-        </legend>
-        <IonSegment
-          v-model="transport"
-          class="transport-segment"
-          aria-label="Local connection transport"
-        >
-          <IonSegmentButton value="auto">
-            Auto
-          </IonSegmentButton>
-          <IonSegmentButton value="wifi">
-            Wi-Fi
-          </IonSegmentButton>
-          <IonSegmentButton value="bluetooth">
-            Bluetooth
-          </IonSegmentButton>
-        </IonSegment>
-      </fieldset>
-
-      <fieldset class="field-group">
-        <legend class="field-label">
           Max players
         </legend>
         <div class="stepper">
@@ -97,25 +73,10 @@ function submit() {
         </div>
       </fieldset>
 
-      <section
-        class="room-code"
-        aria-labelledby="room-code-title"
-      >
-        <img
-          v-if="qrDataUrl"
-          class="room-code__qr"
-          :src="qrDataUrl"
-          alt="QR code for room K4P9"
-        >
-        <div>
-          <span
-            id="room-code-title"
-            class="field-label"
-          >Room code</span>
-          <strong class="room-code__value">{{ roomCode }}</strong>
-          <small>Scan QR or enter code</small>
-        </div>
-      </section>
+      <p class="room-form__hint">
+        A unique room code and QR appear in the lobby once you open it. Share
+        either one so friends can join.
+      </p>
 
       <IonButton
         class="primary-button room-form__submit"
@@ -123,7 +84,7 @@ function submit() {
         type="submit"
         :disabled="props.isSubmitting"
       >
-        {{ props.isSubmitting ? 'Opening Lobbyâ€¦' : 'Open Lobby' }}
+        {{ props.isSubmitting ? 'Opening Lobby…' : 'Open Lobby' }}
       </IonButton>
     </form>
   </div>
@@ -168,23 +129,6 @@ function submit() {
   --padding-end: 0.9rem;
 }
 
-.transport-segment {
-  min-height: 3rem;
-  padding: 0.22rem;
-  border-radius: 0.82rem;
-  background: var(--color-surface);
-  --background: var(--color-surface);
-}
-
-.transport-segment ion-segment-button {
-  min-width: 0;
-  min-height: 2.55rem;
-  --border-radius: 0.68rem;
-  --color: var(--color-text-muted);
-  --color-checked: #f8fafc;
-  --indicator-color: var(--color-action);
-}
-
 .stepper {
   display: grid;
   min-height: 3.25rem;
@@ -214,34 +158,11 @@ function submit() {
   font-size: 1.25rem;
 }
 
-.room-code {
-  display: grid;
-  grid-template-columns: 4.5rem 1fr;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  border-radius: 1rem;
-  background: var(--color-surface);
-}
-
-.room-code__qr {
-  width: 4.5rem;
-  aspect-ratio: 1;
-  border-radius: 0.6rem;
-  background: var(--color-card);
-}
-
-.room-code__value {
-  display: block;
-  margin: 0.15rem 0;
-  color: var(--color-navy);
-  font-family: var(--font-display);
-  font-size: 2rem;
-  letter-spacing: 0.12em;
-}
-
-.room-code small {
+.room-form__hint {
+  margin: 0;
   color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .room-form__submit {

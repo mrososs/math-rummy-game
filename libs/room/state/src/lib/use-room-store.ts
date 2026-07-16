@@ -4,11 +4,9 @@ import type {
   GameCommand,
   GameRoomBackend,
   LiveRoomSnapshot,
-  NearbyRoom,
   PlayerGameSnapshot,
   RoomPlayer,
   RoomSnapshot,
-  TransportKind,
 } from 'network-contracts';
 import { normalizeRoomCode } from 'network-contracts';
 
@@ -32,29 +30,50 @@ let unsubscribeFromBackend: (() => void) | undefined;
 let commandChain: Promise<void> = Promise.resolve();
 let pendingCommands = 0;
 
-function demoPlayers(hostName = 'Maya', maximumPlayers = 6): RoomPlayer[] {
-  const names = [hostName, 'Leo', 'Sara', 'Omar', 'Nada', 'Yusuf'];
-  return names.slice(0, maximumPlayers).map((name, index) => ({
-    id: `player-${index + 1}`,
-    name,
-    seat: index + 1,
-    color: PLAYER_COLORS[index],
-    isHost: index === 0,
-    isReady: true,
-    cardsRemaining: [10, 7, 9, 8, 10, 10][index],
-    connection: index === 4 ? 'weak' : index > 1 ? 'good' : 'strong',
-    transport: index === 3 ? 'hotspot' : 'wifi',
-  }));
+function randomRoomCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(4);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  let code = '';
+  for (let index = 0; index < 4; index += 1) {
+    const byte = bytes[index] || Math.floor(Math.random() * 256);
+    code += alphabet[byte % alphabet.length];
+  }
+  return code;
 }
 
-function createRoomSnapshot(input: CreateRoomInput): RoomSnapshot {
+function emptyRoom(): RoomSnapshot {
   return {
-    code: 'K4P9',
-    maxPlayers: input.maxPlayers,
-    hostId: 'player-1',
+    code: '',
+    maxPlayers: 6,
+    hostId: '',
     status: 'lobby',
-    transport: input.transport,
-    players: demoPlayers(input.hostName, input.maxPlayers),
+    transport: 'wifi',
+    players: [],
+  };
+}
+
+/** Offline fallback room (no backend): a real code and just the host. */
+function createLocalRoom(input: CreateRoomInput, hostId: string): RoomSnapshot {
+  return {
+    code: randomRoomCode(),
+    maxPlayers: input.maxPlayers,
+    hostId,
+    status: 'lobby',
+    transport: 'wifi',
+    players: [
+      {
+        id: hostId,
+        name: input.hostName.trim() || 'Player',
+        seat: 1,
+        color: PLAYER_COLORS[0],
+        isHost: true,
+        isReady: true,
+        cardsRemaining: 10,
+        connection: 'strong',
+        transport: 'wifi',
+      },
+    ],
   };
 }
 
@@ -105,7 +124,6 @@ interface RoomState {
   stateVersion: number;
   gameState: unknown | null;
   playerSnapshot: PlayerGameSnapshot | null;
-  nearbyRooms: NearbyRoom[];
   backendEnabled: boolean;
   isLoading: boolean;
   commandPending: boolean;
@@ -114,40 +132,13 @@ interface RoomState {
 
 export const useRoomStore = defineStore('local-room', {
   state: (): RoomState => ({
-    currentPlayerId: 'player-1',
-    currentPlayerName: 'Maya',
-    room: createRoomSnapshot({
-      hostName: 'Maya',
-      maxPlayers: 6,
-      transport: 'auto',
-    }),
+    currentPlayerId: '',
+    currentPlayerName: 'Player',
+    room: emptyRoom(),
     roomId: undefined,
     stateVersion: 0,
     gameState: null,
     playerSnapshot: null,
-    nearbyRooms: [
-      {
-        code: 'K4P9',
-        name: "Maya's Room",
-        hostName: 'Maya',
-        transport: 'wifi',
-        connection: 'strong',
-      },
-      {
-        code: 'B7T2',
-        name: 'Family Night',
-        hostName: 'Farah',
-        transport: 'hotspot',
-        connection: 'good',
-      },
-      {
-        code: 'M3X8',
-        name: "Leo's table",
-        hostName: 'Leo',
-        transport: 'bluetooth',
-        connection: 'weak',
-      },
-    ],
     backendEnabled: false,
     isLoading: false,
     commandPending: false,
@@ -217,11 +208,11 @@ export const useRoomStore = defineStore('local-room', {
           this.subscribeToBackend();
           this.applyBackendSnapshot(await configuredBackend.createRoom(input));
         } else {
-          this.currentPlayerId = 'player-1';
-          this.room = createRoomSnapshot({
-            ...input,
-            hostName: this.currentPlayerName,
-          });
+          this.currentPlayerId = 'local-host';
+          this.room = createLocalRoom(
+            { ...input, hostName: this.currentPlayerName },
+            'local-host',
+          );
           this.gameState = null;
           this.stateVersion = 0;
         }
@@ -247,13 +238,11 @@ export const useRoomStore = defineStore('local-room', {
             ),
           );
         } else {
-          const code = normalizeRoomCode(roomCode) || 'K4P9';
           const player: RoomPlayer = {
-            id: 'player-local',
+            id: 'local-guest',
             name: this.currentPlayerName,
-            seat: this.room.players.length + 1,
-            color:
-              PLAYER_COLORS[this.room.players.length % PLAYER_COLORS.length],
+            seat: 1,
+            color: PLAYER_COLORS[0],
             isHost: false,
             isReady: false,
             cardsRemaining: 10,
@@ -262,9 +251,9 @@ export const useRoomStore = defineStore('local-room', {
           };
           this.currentPlayerId = player.id;
           this.room = {
-            ...this.room,
-            code,
-            players: [...this.room.players, player],
+            ...emptyRoom(),
+            code: normalizeRoomCode(roomCode) || randomRoomCode(),
+            players: [player],
           };
         }
         return true;
@@ -274,9 +263,6 @@ export const useRoomStore = defineStore('local-room', {
       } finally {
         this.isLoading = false;
       }
-    },
-    setTransport(transport: TransportKind): void {
-      this.room = { ...this.room, transport };
     },
     async toggleReady(): Promise<void> {
       const current = this.currentPlayer;

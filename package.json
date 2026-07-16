@@ -28,6 +28,8 @@
     "@ionic/vue": "^8.8.13",
     "@ionic/vue-router": "^8.8.13",
     "@supabase/supabase-js": "^2.110.5",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "ionicons": "^8.0.13",
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",

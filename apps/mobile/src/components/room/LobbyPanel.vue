@@ -6,6 +6,7 @@ import type { RoomSnapshot } from 'network-contracts';
 import { useRoomQr } from 'room-state';
 import { PlayerBadge } from 'shared-ui';
 import ScreenHeader from '../layout/ScreenHeader.vue';
+import { useToast } from '../../composables/useToast';
 
 const props = defineProps<{
   room: RoomSnapshot;
@@ -23,6 +24,16 @@ const emit = defineEmits<{
 
 const roomCode = computed(() => props.room.code);
 const { dataUrl: qrDataUrl } = useRoomQr(roomCode);
+const toast = useToast();
+
+async function copyCode(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(props.room.code);
+    await toast.success('Room code copied.');
+  } catch {
+    await toast.error('Could not copy the code — copy it manually.');
+  }
+}
 const currentPlayer = computed(() =>
   props.room.players.find((player) => player.id === props.currentPlayerId),
 );
@@ -65,18 +76,14 @@ const waitingNames = computed(() =>
         <button
           type="button"
           aria-label="Copy room code"
+          @click="copyCode"
         >
           <IonIcon :icon="copyOutline" />
         </button>
       </section>
 
       <div class="lobby-meta">
-        <span><IonIcon :icon="wifiOutline" />
-          {{
-            props.room.transport === 'auto'
-              ? 'Wi-Fi · Auto'
-              : props.room.transport
-          }}</span>
+        <span><IonIcon :icon="wifiOutline" /> Online</span>
         <span>{{ props.room.players.length }}/{{
           props.room.maxPlayers
         }}

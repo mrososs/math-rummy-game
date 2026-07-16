@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import { IonButton, IonIcon, IonInput } from '@ionic/vue';
 import { qrCodeOutline } from 'ionicons/icons';
-import type { NearbyRoom } from 'network-contracts';
 import { normalizeRoomCode } from 'network-contracts';
 import ScreenHeader from '../layout/ScreenHeader.vue';
+import QrScannerModal from './QrScannerModal.vue';
 
 const props = defineProps<{
-  nearbyRooms: readonly NearbyRoom[];
   isSubmitting?: boolean;
+  initialName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -16,16 +16,20 @@ const emit = defineEmits<{
   submit: [roomCode: string, playerName: string];
 }>();
 
-const playerName = shallowRef('Maya');
-const rawCode = shallowRef('K4');
+const playerName = shallowRef((props.initialName ?? '').trim() || 'Player');
+const rawCode = shallowRef('');
 const roomCode = computed(() => normalizeRoomCode(rawCode.value));
-
-function selectRoom(room: NearbyRoom) {
-  rawCode.value = room.code;
-}
+const scannerOpen = ref(false);
 
 function submit() {
   emit('submit', roomCode.value, playerName.value);
+}
+
+function onScanned(code: string) {
+  rawCode.value = code;
+  scannerOpen.value = false;
+  // The scanned code is complete, so join straight away.
+  emit('submit', normalizeRoomCode(code), playerName.value);
 }
 </script>
 
@@ -56,8 +60,9 @@ function submit() {
           class="code-input"
           aria-label="Four-character room code"
           inputmode="text"
+          autocapitalize="characters"
           :maxlength="4"
-          placeholder="K4--"
+          placeholder="––––"
         />
       </label>
 
@@ -66,6 +71,7 @@ function submit() {
         expand="block"
         fill="outline"
         type="button"
+        @click="scannerOpen = true"
       >
         <IonIcon
           slot="start"
@@ -74,39 +80,21 @@ function submit() {
         Scan QR code
       </IonButton>
 
-      <div class="section-rule">
-        <span>Nearby rooms</span>
-      </div>
-
-      <div class="nearby-list">
-        <button
-          v-for="room in props.nearbyRooms"
-          :key="room.code"
-          class="nearby-room"
-          type="button"
-          @click="selectRoom(room)"
-        >
-          <span class="nearby-room__avatar">{{ room.hostName.charAt(0) }}</span>
-          <span class="nearby-room__details">
-            <strong>{{ room.name }}</strong>
-            <small>{{ room.transport }} · {{ room.code }}</small>
-          </span>
-          <span
-            class="nearby-room__quality"
-            :class="`nearby-room__quality--${room.connection}`"
-          >● {{ room.connection }}</span>
-        </button>
-      </div>
-
       <IonButton
         class="primary-button"
         expand="block"
         type="submit"
         :disabled="roomCode.length !== 4 || props.isSubmitting"
       >
-        {{ props.isSubmitting ? 'Joiningâ€¦' : 'Join Room' }}
+        {{ props.isSubmitting ? 'Joining…' : 'Join Room' }}
       </IonButton>
     </form>
+
+    <QrScannerModal
+      :is-open="scannerOpen"
+      @scanned="onScanned"
+      @close="scannerOpen = false"
+    />
   </div>
 </template>
 
@@ -154,7 +142,8 @@ function submit() {
   font-family: var(--font-display);
   font-size: 1.8rem;
   font-weight: 700;
-  letter-spacing: 0.85em;
+  letter-spacing: 0.7em;
+  text-align: center;
 }
 
 .scan-button {
@@ -162,74 +151,5 @@ function submit() {
   --border-color: var(--color-action);
   --border-radius: 0.85rem;
   --color: var(--color-action);
-}
-
-.section-rule {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 0.7rem;
-  color: var(--color-text-muted);
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.section-rule::before,
-.section-rule::after {
-  height: 1px;
-  background: var(--color-card-border);
-  content: '';
-}
-
-.nearby-list {
-  display: grid;
-  gap: 0.7rem;
-}
-
-.nearby-room {
-  display: grid;
-  min-height: 4.25rem;
-  grid-template-columns: 2.7rem 1fr auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--color-card-border);
-  border-radius: 0.9rem;
-  background: var(--color-card);
-  color: var(--color-ink);
-  cursor: pointer;
-  text-align: left;
-}
-
-.nearby-room__avatar {
-  display: grid;
-  width: 2.7rem;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 0.65rem;
-  background: var(--color-surface);
-  color: var(--color-action);
-  font-weight: 700;
-}
-
-.nearby-room__details {
-  display: grid;
-  gap: 0.1rem;
-}
-
-.nearby-room__details small {
-  color: var(--color-text-muted);
-  text-transform: capitalize;
-}
-
-.nearby-room__quality {
-  color: var(--color-success);
-  font-size: 0.68rem;
-  text-transform: capitalize;
-}
-
-.nearby-room__quality--weak {
-  color: var(--color-turn);
 }
 </style>

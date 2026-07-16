@@ -4,10 +4,12 @@ import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useRoomStore } from 'room-state';
 import JoinRoomForm from '../components/room/JoinRoomForm.vue';
+import { useSettingsStore } from '../stores/use-settings-store';
 
 const router = useRouter();
 const roomStore = useRoomStore();
-const { errorMessage, isLoading, nearbyRooms } = storeToRefs(roomStore);
+const settingsStore = useSettingsStore();
+const { errorMessage, isLoading } = storeToRefs(roomStore);
 
 async function joinRoom(roomCode: string, playerName: string) {
   if (await roomStore.joinRoom(roomCode, playerName)) {
@@ -23,8 +25,8 @@ async function joinRoom(roomCode: string, playerName: string) {
       class="screen-content"
     >
       <JoinRoomForm
-        :nearby-rooms="nearbyRooms"
         :is-submitting="isLoading"
+        :initial-name="settingsStore.playerName"
         class="screen-frame"
         @back="router.back()"
         @submit="joinRoom"
