@@ -95,10 +95,12 @@ export function useGameSession(isBotMode: ComputedRef<boolean>) {
   });
 
   // Gameplay sound cues for state changes (button taps get their own sound).
+  let soundInitialized = false;
   let prevStatus: string | undefined;
   let prevMyTurn = false;
   watch(match, (current) => {
     if (!current) {
+      soundInitialized = false;
       prevStatus = undefined;
       prevMyTurn = false;
       return;
@@ -106,7 +108,10 @@ export function useGameSession(isBotMode: ComputedRef<boolean>) {
     const active = current.players[current.activePlayerIndex];
     const myTurn =
       current.status === 'playing' && active?.id === currentPlayerId.value;
-    if (current.status === 'match-ended' && prevStatus !== 'match-ended') {
+    if (!soundInitialized) {
+      playSound('deal'); // entering / opening the game
+      soundInitialized = true;
+    } else if (current.status === 'match-ended' && prevStatus !== 'match-ended') {
       playSound('win');
     } else if (current.status === 'round-ended' && prevStatus !== 'round-ended') {
       playSound('roundEnd');

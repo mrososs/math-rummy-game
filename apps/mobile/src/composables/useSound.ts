@@ -1,7 +1,9 @@
 // Tiny Web Audio synth for UI/gameplay sound effects. No audio assets and no
 // dependency — it generates short tones on the fly, which works in the browser
-// and the Capacitor WebView. Audio starts on the first user gesture (a tap),
-// which browsers require.
+// and the Capacitor WebView.
+//
+// WebViews start the AudioContext "suspended" and only allow it to resume from
+// a user gesture, so unlockAudio() must run on the first touch/click.
 
 interface ToneSpec {
   freq: number;
@@ -15,36 +17,42 @@ interface ToneSpec {
 }
 
 const SOUNDS: Record<string, ToneSpec[]> = {
-  button: [{ freq: 300, type: 'triangle', duration: 0.05, gain: 0.035 }],
-  select: [{ freq: 540, type: 'sine', duration: 0.08, gain: 0.05, freqTo: 680 }],
+  button: [{ freq: 300, type: 'triangle', duration: 0.06, gain: 0.11 }],
+  select: [{ freq: 540, type: 'sine', duration: 0.09, gain: 0.16, freqTo: 720 }],
   deselect: [
-    { freq: 440, type: 'sine', duration: 0.08, gain: 0.04, freqTo: 320 },
+    { freq: 460, type: 'sine', duration: 0.09, gain: 0.13, freqTo: 300 },
+  ],
+  deal: [
+    { freq: 380, type: 'triangle', duration: 0.07, gain: 0.13 },
+    { freq: 300, type: 'triangle', duration: 0.07, gain: 0.13, delay: 0.07 },
+    { freq: 240, type: 'triangle', duration: 0.09, gain: 0.13, delay: 0.14 },
   ],
   turn: [
-    { freq: 587, type: 'sine', duration: 0.12, gain: 0.05 },
-    { freq: 784, type: 'sine', duration: 0.16, gain: 0.05, delay: 0.09 },
+    { freq: 587, type: 'sine', duration: 0.13, gain: 0.16 },
+    { freq: 784, type: 'sine', duration: 0.18, gain: 0.16, delay: 0.1 },
   ],
   roundEnd: [
-    { freq: 523, type: 'triangle', duration: 0.14, gain: 0.05 },
-    { freq: 392, type: 'triangle', duration: 0.2, gain: 0.05, delay: 0.12 },
+    { freq: 523, type: 'triangle', duration: 0.16, gain: 0.16 },
+    { freq: 392, type: 'triangle', duration: 0.22, gain: 0.16, delay: 0.14 },
   ],
   win: [
-    { freq: 523, type: 'triangle', duration: 0.14, gain: 0.06 },
-    { freq: 659, type: 'triangle', duration: 0.14, gain: 0.06, delay: 0.12 },
-    { freq: 784, type: 'triangle', duration: 0.14, gain: 0.06, delay: 0.24 },
-    { freq: 1047, type: 'triangle', duration: 0.28, gain: 0.06, delay: 0.36 },
+    { freq: 523, type: 'triangle', duration: 0.15, gain: 0.18 },
+    { freq: 659, type: 'triangle', duration: 0.15, gain: 0.18, delay: 0.13 },
+    { freq: 784, type: 'triangle', duration: 0.15, gain: 0.18, delay: 0.26 },
+    { freq: 1047, type: 'triangle', duration: 0.3, gain: 0.18, delay: 0.39 },
   ],
   success: [
-    { freq: 659, type: 'sine', duration: 0.1, gain: 0.05 },
-    { freq: 988, type: 'sine', duration: 0.14, gain: 0.05, delay: 0.08 },
+    { freq: 659, type: 'sine', duration: 0.11, gain: 0.16 },
+    { freq: 988, type: 'sine', duration: 0.15, gain: 0.16, delay: 0.09 },
   ],
-  error: [{ freq: 196, type: 'sawtooth', duration: 0.22, gain: 0.05, freqTo: 150 }],
+  error: [{ freq: 196, type: 'sawtooth', duration: 0.24, gain: 0.16, freqTo: 150 }],
 };
 
 export type SoundName = keyof typeof SOUNDS;
 
 let audioContext: AudioContext | undefined;
 let enabled = true;
+let unlocked = false;
 
 function getContext(): AudioContext | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -54,14 +62,31 @@ function getContext(): AudioContext | undefined {
       .webkitAudioContext;
   if (!Ctor) return undefined;
   audioContext ??= new Ctor();
-  if (audioContext.state === 'suspended') void audioContext.resume();
   return audioContext;
 }
 
-function playTone(ctx: AudioContext, spec: ToneSpec): void {
-  const start = ctx.currentTime + (spec.delay ?? 0);
+/** Resume + prime the context from a user gesture (required by WebViews). */
+export function unlockAudio(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') void ctx.resume();
+  if (unlocked) return;
+  try {
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+    unlocked = true;
+  } catch {
+    // ignore
+  }
+}
+
+function playTone(ctx: AudioContext, spec: ToneSpec, base: number): void {
+  const start = base + (spec.delay ?? 0);
   const duration = spec.duration ?? 0.08;
-  const gain = spec.gain ?? 0.04;
+  const gain = spec.gain ?? 0.1;
   const osc = ctx.createOscillator();
   const amp = ctx.createGain();
   osc.type = spec.type ?? 'sine';
@@ -81,8 +106,10 @@ export function playSound(name: SoundName): void {
   if (!enabled) return;
   const ctx = getContext();
   if (!ctx) return;
+  if (ctx.state === 'suspended') void ctx.resume();
   try {
-    for (const spec of SOUNDS[name] ?? SOUNDS.button) playTone(ctx, spec);
+    const base = ctx.currentTime + 0.02;
+    for (const spec of SOUNDS[name] ?? SOUNDS.button) playTone(ctx, spec, base);
   } catch {
     // Never let a sound failure affect gameplay.
   }
