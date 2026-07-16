@@ -23,6 +23,65 @@ import {
   type MathOperation,
   type BotDifficulty,
 } from 'game-domain';
+import type { PlayerGameSnapshot } from 'network-contracts';
+
+export type GameTransportMode = 'local' | 'online';
+
+/**
+ * Rebuilds a renderable GameMatch from a sanitized server snapshot. Opponent
+ * hands and the deck are placeholder cards (only their counts are shown); the
+ * viewer's own hand is real, with any drafted wild values applied so local
+ * validation matches what will be sent to the server.
+ */
+function snapshotToMatch(
+  snapshot: PlayerGameSnapshot,
+  wildDraft: Record<string, number>,
+): GameMatch {
+  const placeholders = (count: number, prefix: string): GameCard[] =>
+    Array.from({ length: Math.max(0, count) }, (_, index) => ({
+      id: `${prefix}-${index}`,
+      kind: 'number' as const,
+      value: 0,
+    }));
+
+  const players = snapshot.players.map((player) => ({
+    id: player.id,
+    name: player.name,
+    seat: player.seat,
+    phaseId: player.phaseId,
+    score: player.score,
+    completedPhase: player.completedPhase,
+    laidMelds: player.laidMelds,
+    hand:
+      player.id === snapshot.viewerId
+        ? snapshot.myHand.map((card) =>
+            card.kind === 'wild' && wildDraft[card.id] != null
+              ? { ...card, lockedValue: wildDraft[card.id] }
+              : card,
+          )
+        : placeholders(player.cardCount, `hidden-${player.id}`),
+  }));
+
+  const discardPile = snapshot.discardTop
+    ? [
+        ...placeholders(snapshot.discardCount - 1, 'discard-hidden'),
+        snapshot.discardTop,
+      ]
+    : [];
+
+  return {
+    id: snapshot.gameId,
+    round: snapshot.round,
+    status: snapshot.status,
+    players,
+    activePlayerIndex: snapshot.activePlayerIndex,
+    turnStep: snapshot.turnStep,
+    deck: placeholders(snapshot.deckCount, 'deck-hidden'),
+    discardPile,
+    actionLog: snapshot.actionLog,
+    winnerId: snapshot.winnerId ?? undefined,
+  };
+}
 
 export interface InitializeGameOptions {
   seed?: string;
@@ -37,6 +96,12 @@ export const useGameStore = defineStore('game-match', () => {
   const stagedMelds = shallowRef<EngineMeldInput[]>([]);
   const selectedOperation = shallowRef<MathOperation>('add');
   const feedbackMessage = shallowRef('Draw a card to begin your turn.');
+  // Online mode: the view renders from an authoritative server snapshot and
+  // dispatches commands instead of mutating the match locally.
+  const transportMode = shallowRef<GameTransportMode>('local');
+  const currentSnapshot = shallowRef<PlayerGameSnapshot | null>(null);
+  const wildDraft = shallowRef<Record<string, number>>({});
+  const pendingCommand = shallowRef(false);
 
   const currentPlayer = computed(() =>
     match.value?.players.find((player) => player.id === currentPlayerId.value),
@@ -149,6 +214,9 @@ export const useGameStore = defineStore('game-match', () => {
           }
         : created;
     currentPlayerId.value = localPlayerId;
+    transportMode.value = 'local';
+    currentSnapshot.value = null;
+    wildDraft.value = {};
     selectedCardIds.value = [];
     stagedMelds.value = [];
     selectedOperation.value = 'add';
@@ -158,6 +226,9 @@ export const useGameStore = defineStore('game-match', () => {
   function hydrateGame(nextMatch: GameMatch, localPlayerId: string): void {
     match.value = nextMatch;
     currentPlayerId.value = localPlayerId;
+    transportMode.value = 'local';
+    currentSnapshot.value = null;
+    wildDraft.value = {};
     selectedCardIds.value = [];
     stagedMelds.value = [];
     selectedOperation.value = 'add';
@@ -167,6 +238,43 @@ export const useGameStore = defineStore('game-match', () => {
           ? 'Your turn - draw from either pile.'
           : 'Build your phase, hit the table, or discard.'
         : `Waiting for ${activePlayer(nextMatch).name}.`;
+  }
+
+  /** Online: render from an authoritative server snapshot. */
+  function hydrateFromSnapshot(
+    snapshot: PlayerGameSnapshot,
+    localPlayerId: string,
+  ): void {
+    transportMode.value = 'online';
+    currentSnapshot.value = snapshot;
+    currentPlayerId.value = localPlayerId;
+    wildDraft.value = {};
+    selectedCardIds.value = [];
+    stagedMelds.value = [];
+    selectedOperation.value = 'add';
+    match.value = snapshotToMatch(snapshot, {});
+    const active = snapshot.players[snapshot.activePlayerIndex];
+    feedbackMessage.value =
+      snapshot.status !== 'playing'
+        ? 'Round complete.'
+        : active?.id === localPlayerId
+          ? snapshot.turnStep === 'draw'
+            ? 'Your turn - draw from either pile.'
+            : 'Build your phase, hit the table, or discard.'
+          : `Waiting for ${active?.name ?? 'the next player'}.`;
+  }
+
+  /** Online: draft a wild value locally; sent with the next lay/hit command. */
+  function setWildDraft(cardId: string, value: number): void {
+    wildDraft.value = { ...wildDraft.value, [cardId]: value };
+    if (currentSnapshot.value) {
+      match.value = snapshotToMatch(currentSnapshot.value, wildDraft.value);
+    }
+    feedbackMessage.value = `Wild card set to ${value}.`;
+  }
+
+  function setPendingCommand(pending: boolean): void {
+    pendingCommand.value = pending;
   }
 
   function toggleCard(cardId: string): void {
@@ -339,6 +447,10 @@ export const useGameStore = defineStore('game-match', () => {
     stagedMelds,
     selectedOperation,
     feedbackMessage,
+    transportMode,
+    currentSnapshot,
+    wildDraft,
+    pendingCommand,
     currentPlayer,
     currentPhase,
     currentHand,
@@ -359,6 +471,9 @@ export const useGameStore = defineStore('game-match', () => {
     lastAction,
     initializeGame,
     hydrateGame,
+    hydrateFromSnapshot,
+    setWildDraft,
+    setPendingCommand,
     toggleCard,
     setOperation,
     draw,

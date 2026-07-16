@@ -1,6 +1,41 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseLiveRoomSnapshot } from './room-repository';
+import {
+  parseLiveRoomSnapshot,
+  validatePlayerSnapshot,
+} from './room-repository';
+
+const wellFormedSnapshot = {
+  gameId: 'match-1',
+  stateVersion: 3,
+  viewerId: 'u1',
+  round: 1,
+  status: 'playing',
+  activePlayerId: 'u1',
+  activePlayerIndex: 0,
+  turnStep: 'draw',
+  deckCount: 80,
+  discardCount: 1,
+  discardTop: { id: 'n-5-0', kind: 'number', value: 5 },
+  winnerId: null,
+  players: [
+    {
+      id: 'u1',
+      name: 'Maya',
+      seat: 1,
+      phaseId: 1,
+      score: 0,
+      cardCount: 10,
+      completedPhase: false,
+      laidMelds: [],
+    },
+  ],
+  myHand: [
+    { id: 'n-2-0', kind: 'number', value: 2 },
+    { id: 'wild-0', kind: 'wild' },
+  ],
+  actionLog: [],
+};
 
 describe('parseLiveRoomSnapshot', () => {
   it('maps the database RPC payload into the shared room contract', () => {
@@ -42,5 +77,37 @@ describe('parseLiveRoomSnapshot', () => {
     expect(() =>
       parseLiveRoomSnapshot({ roomId: 'room', stateVersion: 0 }),
     ).toThrow(/invalid room/i);
+  });
+});
+
+describe('validatePlayerSnapshot', () => {
+  it('accepts a well-formed snapshot and preserves the private hand', () => {
+    const snapshot = validatePlayerSnapshot(wellFormedSnapshot);
+    expect(snapshot.viewerId).toBe('u1');
+    expect(snapshot.myHand).toHaveLength(2);
+    expect(snapshot.players[0].cardCount).toBe(10);
+  });
+
+  it('rejects a snapshot with an invalid status', () => {
+    expect(() =>
+      validatePlayerSnapshot({ ...wellFormedSnapshot, status: 'hacked' }),
+    ).toThrow(/invalid snapshot status/i);
+  });
+
+  it('rejects a snapshot with a malformed card in hand', () => {
+    expect(() =>
+      validatePlayerSnapshot({
+        ...wellFormedSnapshot,
+        myHand: [{ id: 'x', kind: 'plutonium' }],
+      }),
+    ).toThrow(/invalid card kind/i);
+  });
+
+  it('rejects a snapshot missing its collections', () => {
+    const { myHand, ...withoutHand } = wellFormedSnapshot;
+    void myHand;
+    expect(() => validatePlayerSnapshot(withoutHand)).toThrow(
+      /invalid snapshot collections/i,
+    );
   });
 });

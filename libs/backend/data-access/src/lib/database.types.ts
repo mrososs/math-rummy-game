@@ -212,18 +212,6 @@ export interface Database {
         Args: { target_room_id: string; ready: boolean };
         Returns: Json;
       };
-      start_game_room: {
-        Args: { target_room_id: string; initial_state: Json };
-        Returns: Json;
-      };
-      update_game_room_state: {
-        Args: {
-          target_room_id: string;
-          expected_version: number;
-          next_state: Json;
-        };
-        Returns: Json;
-      };
       leave_game_room: {
         Args: { target_room_id: string };
         Returns: undefined;

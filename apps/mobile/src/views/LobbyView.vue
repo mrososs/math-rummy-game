@@ -16,6 +16,14 @@ const canStart = computed(() => roomStore.canStart);
 const isHost = computed(() => roomStore.isHost);
 
 async function startGame() {
+  // Online: the server shuffles and deals; the client uploads nothing.
+  if (roomStore.backendEnabled) {
+    if (await roomStore.startGame()) {
+      await router.push('/game');
+    }
+    return;
+  }
+  // Offline/local: build the match on-device.
   gameStore.initializeGame(
     room.value.players.map(({ id, name, seat }) => ({ id, name, seat })),
     currentPlayerId.value,

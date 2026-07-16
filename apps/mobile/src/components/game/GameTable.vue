@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { IonButton, IonIcon } from '@ionic/vue';
 import { closeOutline, trashOutline } from 'ionicons/icons';
 import type {
@@ -15,6 +15,8 @@ import GameBoard from './GameBoard.vue';
 import GameHud from './GameHud.vue';
 import PhaseWorkbench from './PhaseWorkbench.vue';
 import PlayerHand from './PlayerHand.vue';
+import ScoreboardModal from './ScoreboardModal.vue';
+import type { ScoreEntry } from './scoreboard';
 
 interface StagedMeldDetails extends EngineMeldInput {
   cards: readonly GameCard[];
@@ -92,6 +94,31 @@ const turnGuideTitle = computed(() =>
   props.phaseComplete ? 'Hit or end your turn' : 'End your turn',
 );
 
+const showScores = ref(false);
+const scoreEntries = computed<ScoreEntry[]>(() => {
+  const colorById = new Map(
+    props.room.players.map((player) => [player.id, player.color] as const),
+  );
+  return [...props.match.players]
+    .map((player) => ({
+      id: player.id,
+      name: player.name,
+      phaseId: player.phaseId,
+      score: player.score,
+      cardsRemaining: player.hand.length,
+      color: colorById.get(player.id) ?? '#475569',
+      isHost: player.id === props.room.hostId,
+      isYou: player.id === props.currentPlayerId,
+      isWinner: player.id === props.match.winnerId,
+    }))
+    .sort(
+      (first, second) =>
+        second.phaseId - first.phaseId ||
+        first.score - second.score ||
+        first.name.localeCompare(second.name),
+    );
+});
+
 function handleHit(targetPlayerId: string, meldId: string): void {
   emit('hit', targetPlayerId, meldId);
 }
@@ -110,6 +137,7 @@ function handleWildValue(cardId: string, value: number): void {
       :active-player-name="activePlayer.name"
       :is-your-turn="activePlayer.id === props.currentPlayerId"
       :turn-step="props.match.turnStep"
+      @open-scores="showScores = true"
     />
 
     <GameBoard
@@ -198,6 +226,12 @@ function handleWildValue(cardId: string, value: number): void {
         End turn · discard
       </IonButton>
     </nav>
+
+    <ScoreboardModal
+      :is-open="showScores"
+      :entries="scoreEntries"
+      @close="showScores = false"
+    />
   </div>
 </template>
 

@@ -206,7 +206,10 @@ function scrollCards(direction: -1 | 1): void {
   gap: 0.42rem;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0.8rem 0.25rem 0.4rem;
+  /* Top headroom fits a selected card's lift (~0.65rem) plus its selection
+     badge (~0.55rem) without clipping, since overflow-x:auto forces the
+     y-axis to clip. Side padding keeps the badge off the edges. */
+  padding: 1.7rem 0.55rem 0.55rem;
   overscroll-behavior-x: contain;
   scroll-padding-inline: 0.25rem;
   scroll-snap-type: x proximity;

@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia';
 import type {
   CreateRoomInput,
+  GameCommand,
   GameRoomBackend,
   LiveRoomSnapshot,
   NearbyRoom,
+  PlayerGameSnapshot,
   RoomPlayer,
   RoomSnapshot,
   TransportKind,
@@ -25,6 +27,10 @@ const BOT_NAMES = ['Nova', 'Tally', 'Orbit', 'Pip', 'Sage'] as const;
 
 let configuredBackend: GameRoomBackend | undefined;
 let unsubscribeFromBackend: (() => void) | undefined;
+// Serializes outgoing commands so they commit in order, each using the version
+// produced by the previous one.
+let commandChain: Promise<void> = Promise.resolve();
+let pendingCommands = 0;
 
 function demoPlayers(hostName = 'Maya', maximumPlayers = 6): RoomPlayer[] {
   const names = [hostName, 'Leo', 'Sara', 'Omar', 'Nada', 'Yusuf'];
@@ -98,9 +104,11 @@ interface RoomState {
   roomId?: string;
   stateVersion: number;
   gameState: unknown | null;
+  playerSnapshot: PlayerGameSnapshot | null;
   nearbyRooms: NearbyRoom[];
   backendEnabled: boolean;
   isLoading: boolean;
+  commandPending: boolean;
   errorMessage: string;
 }
 
@@ -116,6 +124,7 @@ export const useRoomStore = defineStore('local-room', {
     roomId: undefined,
     stateVersion: 0,
     gameState: null,
+    playerSnapshot: null,
     nearbyRooms: [
       {
         code: 'K4P9',
@@ -141,6 +150,7 @@ export const useRoomStore = defineStore('local-room', {
     ],
     backendEnabled: false,
     isLoading: false,
+    commandPending: false,
     errorMessage: '',
   }),
   getters: {
@@ -180,6 +190,7 @@ export const useRoomStore = defineStore('local-room', {
       this.room = createBotRoomSnapshot(this.currentPlayerName, botCount);
       this.roomId = undefined;
       this.gameState = null;
+      this.playerSnapshot = null;
       this.stateVersion = 0;
       this.errorMessage = '';
     },
@@ -188,6 +199,7 @@ export const useRoomStore = defineStore('local-room', {
       this.room = snapshot.room;
       this.stateVersion = snapshot.stateVersion;
       this.gameState = snapshot.gameState;
+      this.playerSnapshot = snapshot.playerSnapshot;
       if (configuredBackend?.currentUserId) {
         this.currentPlayerId = configuredBackend.currentUserId;
         this.currentPlayerName =
@@ -291,17 +303,15 @@ export const useRoomStore = defineStore('local-room', {
         this.isLoading = false;
       }
     },
-    async startGame(initialState: unknown): Promise<boolean> {
+    async startGame(localMatch?: unknown): Promise<boolean> {
       this.beginRequest();
       try {
-        const gameState = toSerializable(initialState);
-        if (configuredBackend) {
-          this.applyBackendSnapshot(
-            await configuredBackend.startGame(gameState),
-          );
+        if (configuredBackend && this.backendEnabled) {
+          // The server shuffles and deals; no client state is uploaded.
+          this.applyBackendSnapshot(await configuredBackend.startGame());
         } else {
           this.room = { ...this.room, status: 'playing' };
-          this.gameState = gameState;
+          this.gameState = toSerializable(localMatch);
           this.stateVersion += 1;
         }
         return true;
@@ -312,26 +322,53 @@ export const useRoomStore = defineStore('local-room', {
         this.isLoading = false;
       }
     },
+    // Local/offline (bot) mode only. Online play goes through sendCommand().
     async publishGameState(nextState: unknown): Promise<boolean> {
-      const gameState = toSerializable(nextState);
-      if (!configuredBackend || !this.backendEnabled) {
-        this.gameState = gameState;
-        this.stateVersion += 1;
-        return true;
+      this.gameState = toSerializable(nextState);
+      this.stateVersion += 1;
+      return true;
+    },
+    async sendCommand(command: GameCommand): Promise<boolean> {
+      if (!configuredBackend || !this.backendEnabled) return false;
+      // Enqueue behind any in-flight command so they commit strictly in order.
+      pendingCommands += 1;
+      this.commandPending = true;
+      const task = commandChain.then(() => this.runQueuedCommand(command));
+      commandChain = task.then(
+        () => undefined,
+        () => undefined,
+      );
+      try {
+        return await task;
+      } finally {
+        pendingCommands -= 1;
+        if (pendingCommands === 0) this.commandPending = false;
       }
+    },
+    async runQueuedCommand(command: GameCommand): Promise<boolean> {
+      if (!configuredBackend) return false;
       try {
         this.applyBackendSnapshot(
-          await configuredBackend.updateGameState(this.stateVersion, gameState),
+          await configuredBackend.sendCommand(command, this.stateVersion),
         );
         return true;
       } catch (error) {
         this.captureError(error);
+        // Resync to authoritative state after a conflict or rejection.
         try {
-          this.applyBackendSnapshot(await configuredBackend.refresh());
+          this.applyBackendSnapshot(await configuredBackend.fetchSnapshot());
         } catch {
-          // Keep the original concurrency/network error for the UI.
+          // Keep the original error for the UI.
         }
         return false;
+      }
+    },
+    async refreshSnapshot(): Promise<void> {
+      if (!configuredBackend || !this.backendEnabled) return;
+      try {
+        this.applyBackendSnapshot(await configuredBackend.fetchSnapshot());
+      } catch (error) {
+        this.captureError(error);
       }
     },
     async leaveRoom(): Promise<void> {
@@ -342,6 +379,7 @@ export const useRoomStore = defineStore('local-room', {
       }
       this.roomId = undefined;
       this.gameState = null;
+      this.playerSnapshot = null;
       this.stateVersion = 0;
     },
     clearError(): void {

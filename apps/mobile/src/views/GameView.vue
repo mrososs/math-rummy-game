@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeMount, watch } from 'vue';
+import { computed } from 'vue';
 import { IonContent, IonPage, IonSpinner, IonToast } from '@ionic/vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
-import type { DrawSource, GameMatch, MathOperation } from 'game-domain';
 import { useGameStore } from 'game-state';
 import { useRoomStore } from 'room-state';
 import GameTable from '../components/game/GameTable.vue';
 import MatchResultPanel from '../components/game/MatchResultPanel.vue';
-import { useBotMatch } from '../composables/useBotMatch';
+import { useGameSession } from '../composables/useGameSession';
 import { useSettingsStore } from '../stores/use-settings-store';
 
 const route = useRoute();
@@ -17,9 +16,24 @@ const roomStore = useRoomStore();
 const gameStore = useGameStore();
 const settingsStore = useSettingsStore();
 const isBotMode = computed(() => route.query.mode === 'bots');
-const { thinkingBotId, thinkingBotName } = useBotMatch(isBotMode);
-const { errorMessage, gameState, room, currentPlayerId } =
-  storeToRefs(roomStore);
+
+// All game-session synchronization lives in the composable (F-06); this view
+// only renders and forwards interaction.
+const {
+  busy,
+  winnerName,
+  thinkingBotId,
+  thinkingBotName,
+  draw,
+  submitPhase,
+  setOperation,
+  setWildValue,
+  hitSelectedCards,
+  discardSelected,
+  beginNextRound,
+} = useGameSession(isBotMode);
+
+const { errorMessage, room, currentPlayerId } = storeToRefs(roomStore);
 const {
   match,
   currentPhase,
@@ -39,99 +53,6 @@ const {
   canDiscard,
   canHit,
 } = storeToRefs(gameStore);
-const winnerName = computed(() => {
-  const currentMatch = match.value;
-  if (!currentMatch?.winnerId) return undefined;
-  return currentMatch.players.find(
-    (player) => player.id === currentMatch.winnerId,
-  )?.name;
-});
-
-onBeforeMount(() => {
-  if (isBotMode.value && route.query.new === '1') {
-    roomStore.setupBotRoom(settingsStore.playerName, settingsStore.botCount);
-    gameStore.initializeGame(
-      roomStore.room.players.map(({ id, name, seat }) => ({ id, name, seat })),
-      roomStore.currentPlayerId,
-      {
-        seed: `bots-${Date.now()}`,
-        phaseId: 1,
-        useDemoHand: false,
-      },
-    );
-    if (gameStore.match) void roomStore.publishGameState(gameStore.match);
-    return;
-  }
-  if (isGameMatch(gameState.value)) {
-    gameStore.hydrateGame(gameState.value, currentPlayerId.value);
-    return;
-  }
-  if (match.value) return;
-  gameStore.initializeGame(
-    room.value.players.map(({ id, name, seat }) => ({ id, name, seat })),
-    currentPlayerId.value,
-    { seed: `room-${room.value.code}`, phaseId: 1, useDemoHand: false },
-  );
-});
-
-watch(gameState, (nextState) => {
-  if (!isGameMatch(nextState) || nextState === match.value) return;
-  gameStore.hydrateGame(nextState, currentPlayerId.value);
-});
-
-async function syncAction(action: () => void): Promise<void> {
-  const previousMatch = match.value;
-  action();
-  if (match.value && match.value !== previousMatch) {
-    await roomStore.publishGameState(match.value);
-  }
-}
-
-function beginNextRound(): void {
-  void syncAction(() =>
-    gameStore.beginNextRound(`round-${Date.now().toString(36)}`),
-  );
-}
-
-function draw(source: DrawSource): void {
-  void syncAction(() => gameStore.draw(source));
-}
-
-function submitPhase(): void {
-  void syncAction(() => gameStore.submitPhase());
-}
-
-function setWildValue(cardId: string, value: number): void {
-  void syncAction(() => gameStore.setWildValue(cardId, value));
-}
-
-function hitSelectedCards(targetPlayerId: string, meldId: string): void {
-  void syncAction(() => gameStore.hitSelectedCards(targetPlayerId, meldId));
-}
-
-function discardSelected(): void {
-  void syncAction(() => gameStore.discardSelected());
-}
-
-function setOperation(operation: MathOperation): void {
-  gameStore.setOperation(operation);
-}
-
-function isGameMatch(value: unknown): value is GameMatch {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<GameMatch>;
-  return (
-    typeof candidate.id === 'string' &&
-    typeof candidate.round === 'number' &&
-    Array.isArray(candidate.players) &&
-    Array.isArray(candidate.deck) &&
-    Array.isArray(candidate.discardPile) &&
-    (candidate.status === 'playing' ||
-      candidate.status === 'round-ended' ||
-      candidate.status === 'match-ended') &&
-    (candidate.turnStep === 'draw' || candidate.turnStep === 'build')
-  );
-}
 </script>
 
 <template>
@@ -162,12 +83,12 @@ function isGameMatch(value: unknown): value is GameMatch {
               : ''
         "
         :candidate-message="candidateValidation.message"
-        :can-draw="canDraw"
+        :can-draw="canDraw && !busy"
         :can-select-cards="canSelectCards"
         :can-stage-meld="canStageMeld"
-        :can-submit-phase="canSubmitPhase"
-        :can-discard="canDiscard"
-        :can-hit="canHit"
+        :can-submit-phase="canSubmitPhase && !busy"
+        :can-discard="canDiscard && !busy"
+        :can-hit="canHit && !busy"
         :phase-complete="currentPlayer?.completedPhase ?? false"
         @toggle-card="gameStore.toggleCard"
         @draw="draw"
