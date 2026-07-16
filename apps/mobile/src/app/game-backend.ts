@@ -1,10 +1,19 @@
 import {
+  createAccountBackend,
   createGameBackendClient,
   createGameRoomBackend,
+  type AccountBackend,
 } from 'backend-data-access';
 import type { GameRoomBackend } from 'network-contracts';
 
 const PLACEHOLDER_KEY = 'replace-with-local-or-project-publishable-key';
+
+let accountBackend: AccountBackend | undefined;
+
+/** The account backend (settings + profile stats), available once online. */
+export function getAccountBackend(): AccountBackend | undefined {
+  return accountBackend;
+}
 
 /**
  * Builds the online backend, or returns undefined to run single-device offline.
@@ -39,9 +48,12 @@ export function createConfiguredGameBackend(): GameRoomBackend | undefined {
   }
 
   logTransport('Online multiplayer enabled.');
-  return createGameRoomBackend(
-    createGameBackendClient({ url: url as string, publishableKey: publishableKey as string }),
-  );
+  const client = createGameBackendClient({
+    url: url as string,
+    publishableKey: publishableKey as string,
+  });
+  accountBackend = createAccountBackend(client);
+  return createGameRoomBackend(client);
 }
 
 function logTransport(message: string): void {

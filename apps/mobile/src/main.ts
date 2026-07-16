@@ -22,7 +22,10 @@ app.use(IonicVue).use(pinia).use(router);
 
 const gameBackend = createConfiguredGameBackend();
 if (gameBackend) useRoomStore(pinia).configureBackend(gameBackend);
-useSettingsStore(pinia).applyPreferences();
+const settingsStore = useSettingsStore(pinia);
+settingsStore.applyPreferences();
+// Pull any cloud-saved settings for this player (no-op when offline).
+void settingsStore.hydrateFromRemote();
 
 router.isReady().then(() => {
   app.mount('#root');

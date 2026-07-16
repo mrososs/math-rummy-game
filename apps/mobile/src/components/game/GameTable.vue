@@ -11,12 +11,14 @@ import type {
   PhaseDefinition,
 } from 'game-domain';
 import type { RoomSnapshot } from 'network-contracts';
+import type { ProfileStats } from 'backend-data-access';
 import GameBoard from './GameBoard.vue';
 import GameHud from './GameHud.vue';
 import PhaseWorkbench from './PhaseWorkbench.vue';
 import PlayerHand from './PlayerHand.vue';
 import ScoreboardModal from './ScoreboardModal.vue';
 import type { ScoreEntry } from './scoreboard';
+import { getAccountBackend } from '../../app/game-backend';
 
 interface StagedMeldDetails extends EngineMeldInput {
   cards: readonly GameCard[];
@@ -95,22 +97,28 @@ const turnGuideTitle = computed(() =>
 );
 
 const showScores = ref(false);
+const profileStats = ref<Map<string, ProfileStats>>(new Map());
 const scoreEntries = computed<ScoreEntry[]>(() => {
   const colorById = new Map(
     props.room.players.map((player) => [player.id, player.color] as const),
   );
   return [...props.match.players]
-    .map((player) => ({
-      id: player.id,
-      name: player.name,
-      phaseId: player.phaseId,
-      score: player.score,
-      cardsRemaining: player.hand.length,
-      color: colorById.get(player.id) ?? '#475569',
-      isHost: player.id === props.room.hostId,
-      isYou: player.id === props.currentPlayerId,
-      isWinner: player.id === props.match.winnerId,
-    }))
+    .map((player) => {
+      const stats = profileStats.value.get(player.id);
+      return {
+        id: player.id,
+        name: player.name,
+        phaseId: player.phaseId,
+        score: player.score,
+        cardsRemaining: player.hand.length,
+        color: colorById.get(player.id) ?? '#475569',
+        isHost: player.id === props.room.hostId,
+        isYou: player.id === props.currentPlayerId,
+        isWinner: player.id === props.match.winnerId,
+        gamesWon: stats?.gamesWon,
+        gamesPlayed: stats?.gamesPlayed,
+      };
+    })
     .sort(
       (first, second) =>
         second.phaseId - first.phaseId ||
@@ -118,6 +126,20 @@ const scoreEntries = computed<ScoreEntry[]>(() => {
         first.name.localeCompare(second.name),
     );
 });
+
+async function openScores(): Promise<void> {
+  showScores.value = true;
+  const account = getAccountBackend();
+  if (!account) return;
+  try {
+    const stats = await account.fetchProfiles(
+      props.match.players.map((player) => player.id),
+    );
+    profileStats.value = new Map(stats.map((stat) => [stat.id, stat]));
+  } catch {
+    // Show the in-match scores even if lifetime stats can't be loaded.
+  }
+}
 
 function handleHit(targetPlayerId: string, meldId: string): void {
   emit('hit', targetPlayerId, meldId);
@@ -137,7 +159,7 @@ function handleWildValue(cardId: string, value: number): void {
       :active-player-name="activePlayer.name"
       :is-your-turn="activePlayer.id === props.currentPlayerId"
       :turn-step="props.match.turnStep"
-      @open-scores="showScores = true"
+      @open-scores="openScores"
     />
 
     <GameBoard

@@ -8,4 +8,7 @@ export interface ScoreEntry {
   isHost: boolean;
   isYou: boolean;
   isWinner: boolean;
+  /** Lifetime record from Supabase profiles (undefined until loaded/offline). */
+  gamesWon?: number;
+  gamesPlayed?: number;
 }

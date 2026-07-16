@@ -189,6 +189,22 @@ export interface Database {
         >;
         Relationships: [];
       };
+      user_settings: {
+        Row: {
+          user_id: string;
+          data: Json;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          data?: Json;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database['public']['Tables']['user_settings']['Insert']
+        >;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {

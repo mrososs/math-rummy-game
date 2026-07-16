@@ -71,6 +71,10 @@ const emit = defineEmits<{
           <span class="scoreboard__meta">
             <strong>{{ entry.score }}<small> pts</small></strong>
             <small>Phase {{ entry.phaseId }} · {{ entry.cardsRemaining }} cards</small>
+            <small
+              v-if="entry.gamesPlayed !== undefined"
+              class="scoreboard__record"
+            >{{ entry.gamesWon ?? 0 }} won / {{ entry.gamesPlayed }} played</small>
           </span>
         </li>
       </ol>
@@ -179,6 +183,11 @@ const emit = defineEmits<{
 .scoreboard__meta > small {
   color: var(--color-text-muted, #5b6b7b);
   font-size: 0.62rem;
+}
+
+.scoreboard__record {
+  color: var(--color-action, #2e74b5) !important;
+  font-weight: 700;
 }
 
 .scoreboard__hint {

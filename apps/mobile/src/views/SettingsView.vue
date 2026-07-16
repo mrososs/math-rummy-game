@@ -4,6 +4,7 @@ import { IonContent, IonPage } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import GameSettingsPanel from '../components/settings/GameSettingsPanel.vue';
 import ScreenHeader from '../components/layout/ScreenHeader.vue';
+import { useToast } from '../composables/useToast';
 import {
   useSettingsStore,
   type GameSettings,
@@ -11,12 +12,21 @@ import {
 
 const router = useRouter();
 const settingsStore = useSettingsStore();
+const toast = useToast();
 const savedMessage = shallowRef('');
 const settings = computed<GameSettings>(() => ({ ...settingsStore.$state }));
 
-function save(nextSettings: GameSettings): void {
-  settingsStore.saveSettings(nextSettings);
-  savedMessage.value = 'Settings saved.';
+async function save(nextSettings: GameSettings): Promise<void> {
+  const result = await settingsStore.saveSettings(nextSettings);
+  if (result.ok) {
+    savedMessage.value = result.synced
+      ? 'Settings saved to your account.'
+      : 'Settings saved on this device.';
+    await toast.success(savedMessage.value);
+  } else {
+    savedMessage.value = '';
+    await toast.error(result.error ?? 'Could not save settings.');
+  }
 }
 </script>
 
