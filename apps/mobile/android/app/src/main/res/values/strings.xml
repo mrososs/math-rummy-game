@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Math Rummy</string>
+    <string name="title_activity_main">Math Rummy</string>
+    <string name="package_name">com.mathrummy.game</string>
+    <string name="custom_url_scheme">com.mathrummy.game</string>
+</resources>
