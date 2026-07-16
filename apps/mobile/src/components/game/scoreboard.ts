@@ -2,6 +2,8 @@ export interface ScoreEntry {
   id: string;
   name: string;
   phaseId: number;
+  /** The objective of the player's current phase, e.g. "Two sums of 10". */
+  phaseTitle: string;
   score: number;
   cardsRemaining: number;
   color: string;

@@ -245,6 +245,18 @@ export const useGameStore = defineStore('game-match', () => {
     snapshot: PlayerGameSnapshot,
     localPlayerId: string,
   ): void {
+    // A refetch that carries the same authoritative version (e.g. a Realtime
+    // ping from another player's poll, or a focus/resume resync) must not wipe
+    // the local card selection or staged melds the player is building.
+    if (
+      match.value &&
+      currentSnapshot.value &&
+      currentSnapshot.value.stateVersion === snapshot.stateVersion &&
+      currentPlayerId.value === localPlayerId
+    ) {
+      currentSnapshot.value = snapshot;
+      return;
+    }
     transportMode.value = 'online';
     currentSnapshot.value = snapshot;
     currentPlayerId.value = localPlayerId;

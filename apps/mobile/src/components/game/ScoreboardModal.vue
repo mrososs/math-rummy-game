@@ -70,7 +70,8 @@ const emit = defineEmits<{
           </span>
           <span class="scoreboard__meta">
             <strong>{{ entry.score }}<small> pts</small></strong>
-            <small>Phase {{ entry.phaseId }} · {{ entry.cardsRemaining }} cards</small>
+            <small class="scoreboard__phase">Phase {{ entry.phaseId }}/10 · {{ entry.phaseTitle }}</small>
+            <small>{{ entry.cardsRemaining }} cards left</small>
             <small
               v-if="entry.gamesPlayed !== undefined"
               class="scoreboard__record"
@@ -166,7 +167,13 @@ const emit = defineEmits<{
   display: grid;
   justify-items: end;
   gap: 0.1rem;
+  max-width: 11rem;
   text-align: right;
+}
+
+.scoreboard__phase {
+  color: var(--color-navy, #0b2545) !important;
+  font-weight: 700;
 }
 
 .scoreboard__meta strong {

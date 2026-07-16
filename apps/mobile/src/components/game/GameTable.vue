@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { IonButton, IonIcon } from '@ionic/vue';
 import { closeOutline, trashOutline } from 'ionicons/icons';
+import { getPhase } from 'game-domain';
 import type {
   DrawSource,
   EngineMeldInput,
@@ -109,6 +110,7 @@ const scoreEntries = computed<ScoreEntry[]>(() => {
         id: player.id,
         name: player.name,
         phaseId: player.phaseId,
+        phaseTitle: getPhase(player.phaseId).shortTitle,
         score: player.score,
         cardsRemaining: player.hand.length,
         color: colorById.get(player.id) ?? '#475569',

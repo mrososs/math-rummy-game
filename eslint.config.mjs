@@ -10,6 +10,8 @@ export default [
     ignores: [
       '**/dist',
       '**/out-tsc',
+      '**/android',
+      '**/ios',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
     ],

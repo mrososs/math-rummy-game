@@ -98,15 +98,28 @@ export function useGameSession(isBotMode: ComputedRef<boolean>) {
   function resyncIfOnline(): void {
     if (isOnline.value && !document.hidden) void roomStore.refreshSnapshot();
   }
+  // Polling fallback: Realtime can drop on mobile (backgrounded sockets), which
+  // left round transitions stuck until a manual reload. A steady refetch heals
+  // that; the version guard in the store makes unchanged snapshots a no-op, so
+  // this never disturbs an in-progress selection.
+  let pollTimer: ReturnType<typeof setInterval> | undefined;
   onMounted(() => {
     document.addEventListener('visibilitychange', resyncIfOnline);
     window.addEventListener('focus', resyncIfOnline);
     window.addEventListener('online', resyncIfOnline);
+    if (isOnline.value) {
+      pollTimer = setInterval(() => {
+        if (!roomStore.commandPending && !document.hidden) {
+          void roomStore.refreshSnapshot();
+        }
+      }, 5000);
+    }
   });
   onUnmounted(() => {
     document.removeEventListener('visibilitychange', resyncIfOnline);
     window.removeEventListener('focus', resyncIfOnline);
     window.removeEventListener('online', resyncIfOnline);
+    if (pollTimer) clearInterval(pollTimer);
   });
 
   // Offline: run the engine locally, then publish the full match.

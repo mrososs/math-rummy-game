@@ -120,6 +120,34 @@ describe('game engine — deck recycling', () => {
   });
 });
 
+describe('game engine — multi-card equations', () => {
+  it('accepts an equation built from three cards', () => {
+    const match = craft({
+      phaseId: 2, // two equations that equal 12
+      hand: [num('a', 3), num('b', 4), num('c', 5), num('d', 5), num('e', 7)],
+    });
+    const result = layPhase(match, 'p1', [
+      { id: 'g1', cardIds: ['a', 'b', 'c'], operation: 'add' }, // 3+4+5 = 12
+      { id: 'g2', cardIds: ['d', 'e'], operation: 'add' }, // 5+7 = 12
+    ]);
+    expect(result.players[0].completedPhase).toBe(true);
+    expect(result.players[0].laidMelds[0].cards).toHaveLength(3);
+  });
+
+  it('rejects a multi-card equation that misses the target', () => {
+    const match = craft({
+      phaseId: 2,
+      hand: [num('a', 3), num('b', 4), num('c', 4), num('d', 5), num('e', 7)],
+    });
+    expect(() =>
+      layPhase(match, 'p1', [
+        { id: 'g1', cardIds: ['a', 'b', 'c'], operation: 'add' }, // 3+4+4 = 11 ≠ 12
+        { id: 'g2', cardIds: ['d', 'e'], operation: 'add' },
+      ]),
+    ).toThrowError();
+  });
+});
+
 describe('game engine — duplicate card protection', () => {
   it('rejects a phase that reuses the same card in two groups', () => {
     const match = craft({

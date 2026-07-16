@@ -258,11 +258,20 @@ export function validateMeld(
   }
   const numbers = values as number[];
 
-  if (requirement.kind !== 'run' && cards.length !== requirement.cardCount) {
+  // Doubles and exact-division are fixed 2-card pairs; equations may combine
+  // any 2+ cards to reach the target with a single operation.
+  if (
+    (requirement.kind === 'double' || requirement.kind === 'exact-division') &&
+    cards.length !== requirement.cardCount
+  ) {
     return {
       valid: false,
       message: `This group needs exactly ${requirement.cardCount} cards.`,
     };
+  }
+
+  if (requirement.kind === 'equation' && cards.length < 2) {
+    return { valid: false, message: 'An equation needs at least 2 cards.' };
   }
 
   if (requirement.kind === 'equation') {
